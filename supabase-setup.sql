@@ -5,12 +5,14 @@
 -- ============================ 1. tables ============================
 
 create table if not exists public.usta_players (
-  id           uuid primary key default gen_random_uuid(),
-  name         text not null unique,
-  gender       text not null check (gender in ('M','F')),
-  ntrp         numeric(2,1),
-  usta_number  text,
-  phone        text,
+  id             uuid primary key default gen_random_uuid(),
+  name           text not null unique,   -- the official USTA roster name
+  preferred_name text,                   -- what the app displays, when set
+  gender         text not null check (gender in ('M','F')),
+  ntrp           numeric(2,1),
+  usta_number    text,
+  phone          text,
+  venmo          text,                   -- stored without the leading @
   is_captain   boolean not null default false,
   active       boolean not null default true,
   sort_order   int not null default 0,
@@ -170,6 +172,38 @@ begin
      where id = p_id returning id into v_id;
   end if;
   return v_id;
+end $$;
+
+-- Players edit their own preferred name and gender freely (same trust model as
+-- availability). Phone and Venmo need the captain passcode: anyone holding the
+-- public key could otherwise point a teammate's Venmo at themselves.
+create or replace function public.usta_update_profile(
+  p_id uuid, p_preferred_name text, p_phone text, p_gender text, p_venmo text, p_pass text default null)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_phone text := nullif(btrim(coalesce(p_phone, '')), '');
+  -- stored bare, without the @ people habitually type
+  v_venmo text := nullif(btrim(ltrim(btrim(coalesce(p_venmo, '')), '@')), '');
+  cur record;
+begin
+  if p_gender is not null and p_gender not in ('M', 'F') then
+    raise exception 'gender must be M or F';
+  end if;
+
+  select phone, venmo into cur from public.usta_players where id = p_id and active;
+  if not found then raise exception 'player not found'; end if;
+
+  if (v_phone is distinct from cur.phone or v_venmo is distinct from cur.venmo)
+     and not public.usta_check_pass(p_pass) then
+    raise exception 'Phone and Venmo changes need the captain passcode';
+  end if;
+
+  update public.usta_players
+     set preferred_name = nullif(btrim(coalesce(p_preferred_name, '')), ''),
+         phone          = v_phone,
+         gender         = coalesce(p_gender, gender),
+         venmo          = v_venmo
+   where id = p_id and active;
 end $$;
 
 create or replace function public.usta_set_captain_pass(p_old_pass text, p_new_pass text)

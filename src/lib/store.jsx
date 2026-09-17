@@ -107,8 +107,9 @@ export function TeamProvider({ children }) {
     [lineups],
   )
 
-  // Players correct their own details on the way in; no passcode, same trust
-  // model as availability.
+  // Players correct their own name and gender on the way in, same trust model as
+  // availability. Phone and Venmo changes are refused server-side without the
+  // captain passcode, so it rides along whenever this device has one.
   const saveProfile = useCallback(async (id, fields) => {
     const { error: e } = await supabase.rpc('usta_update_profile', {
       p_id: id,
@@ -116,10 +117,11 @@ export function TeamProvider({ children }) {
       p_phone: fields.phone ?? null,
       p_gender: fields.gender ?? null,
       p_venmo: fields.venmo ?? null,
+      p_pass: captainPass,
     })
     if (e) throw new Error(e.message)
     await load()
-  }, [load])
+  }, [captainPass, load])
 
   // ---- captain ----
   const unlockCaptain = useCallback(async (pass) => {

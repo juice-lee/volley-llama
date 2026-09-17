@@ -222,5 +222,7 @@ Remember that local development writes to the live database.
   4.5 seconds). Open a new tab or run `sessionStorage.clear()` to see it again. Its
   animation steps share one timing, so retime them together.
 - **Motion is turned off** for anyone with *Reduce motion* enabled, splash included.
-- **`supabase-setup.sql` is behind the live database.** It doesn't yet include the
-  `preferred_name` and `venmo` columns or the `usta_update_profile` function.
+- **Phone and Venmo edits need the captain passcode.** Players can change their
+  preferred name and gender freely; contact details are read-only unless the
+  device has captain tools unlocked, and the database refuses the change without
+  the passcode either way (`usta_update_profile`).

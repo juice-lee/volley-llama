@@ -1,10 +1,13 @@
 import { useState } from 'react'
+import { useTeam } from '../lib/store'
 import { Avatar, displayName } from './ui'
 
 // Shown once when a player first identifies themselves, and reachable later from
-// the Stats tab. Everything is pre-filled from the roster and everything is
-// editable — the CSV had blank phones and no Venmo handles at all.
+// the Stats tab. Everything is pre-filled from the roster. Name and gender are
+// the player's to change; phone and Venmo need a captain, because anyone holding
+// the public key could otherwise point a teammate's Venmo at themselves.
 export default function ProfileForm({ player, onSave, onBack, saveLabel = "Yep, that's me", busy }) {
+  const { isCaptain } = useTeam()
   const [preferredName, setPreferredName] = useState(displayName(player))
   const [phone, setPhone] = useState(player.phone || '')
   const [gender, setGender] = useState(player.gender)
@@ -18,14 +21,18 @@ export default function ProfileForm({ player, onSave, onBack, saveLabel = "Yep, 
       await onSave({
         // storing the roster name again would just be noise
         preferredName: preferredName.trim() === player.name ? null : preferredName.trim(),
-        phone: phone.trim(),
+        // a locked device sends the stored values back unchanged, so the server
+        // never sees a contact edit it would have to refuse
+        phone: isCaptain ? phone.trim() : (player.phone || ''),
         gender,
-        venmo: venmo.trim(),
+        venmo: isCaptain ? venmo.trim() : (player.venmo || ''),
       })
     } catch (e) {
       setErr(e.message || 'Could not save — check your signal.')
     }
   }
+
+  const contactHint = (what) => (isCaptain ? what : 'Ask a captain to change this')
 
   return (
     <>
@@ -41,9 +48,9 @@ export default function ProfileForm({ player, onSave, onBack, saveLabel = "Yep, 
                  onChange={(e) => setPreferredName(e.target.value)} />
         </Field>
 
-        <Field label="Phone" hint="So the captain can reach you about a match">
-          <input type="tel" inputMode="tel" value={phone} placeholder="206-555-0134"
-                 autoComplete="tel" onChange={(e) => setPhone(e.target.value)} />
+        <Field label="Phone" hint={contactHint('So the captain can reach you about a match')}>
+          <input type="tel" inputMode="tel" value={phone} placeholder={isCaptain ? '206-555-0134' : 'Not set'}
+                 autoComplete="tel" readOnly={!isCaptain} onChange={(e) => setPhone(e.target.value)} />
         </Field>
 
         <Field label="Plays as" hint="Every court is one man and one woman">
@@ -59,11 +66,11 @@ export default function ProfileForm({ player, onSave, onBack, saveLabel = "Yep, 
           </div>
         </Field>
 
-        <Field label="Venmo" hint="For splitting court fees. Optional.">
+        <Field label="Venmo" hint={contactHint('For splitting court fees. Optional.')}>
           <div className="prefixed">
             <span className="prefix">@</span>
-            <input type="text" value={venmo} placeholder="your-venmo" autoCapitalize="none"
-                   autoCorrect="off" spellCheck="false"
+            <input type="text" value={venmo} placeholder={isCaptain ? 'your-venmo' : 'Not set'} autoCapitalize="none"
+                   autoCorrect="off" spellCheck="false" readOnly={!isCaptain}
                    onChange={(e) => setVenmo(e.target.value.replace(/^@+/, ''))} />
           </div>
         </Field>
