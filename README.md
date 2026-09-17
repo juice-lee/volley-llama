@@ -1,0 +1,226 @@
+# Volley Llama
+
+The team app for **AYTC-Volley Llama-Mendez**, a USTA 3.0 mixed doubles team
+(Fall 2026). Players check the schedule and say whether they can play; captains
+build lineups, post them, and enter results.
+
+Built with React + Vite, Supabase, and Netlify.
+
+- [Features](#features)
+- [Getting started](#getting-started)
+- [Project layout](#project-layout)
+- [How it works](#how-it-works)
+- [Captain operations](#captain-operations)
+- [Deploying](#deploying)
+- [Contributing](#contributing)
+- [Gotchas](#gotchas)
+
+## Features
+
+**For players**
+
+- **Home**: the next match, whether you're in the lineup, and a one-tap availability picker.
+- **Schedule**: every match with time, site, and home/away. Answer *Available / Maybe / Out* right from the list.
+- **Stats**: team record, results by court, a player leaderboard, best partnerships, and each player's match log.
+- No accounts. Pick your name once; update your details any time from **Stats → Edit my details**.
+
+**For captains**
+
+- Availability counts split by gender (every lineup needs three men and three women). Tap a count to see who.
+- A red **!** on any upcoming match that doesn't have enough yeses to field a lineup.
+- A lineup builder for three courts (one man and one woman each) that flags maybes, no-answers, dropouts, and any pair over the **6.0 combined NTRP** limit.
+- **Auto-suggest**, which drafts a legal lineup and explains its choices. See [Lineups](#lineups).
+- Post the lineup to the team, copy it as a group text, send a nudge to anyone who hasn't answered, enter scores, and edit match details.
+
+## Getting started
+
+```bash
+git clone https://github.com/juice-lee/volley-llama.git
+cd volley-llama
+npm install
+cp .env.example .env.local   # then fill in the two Supabase values
+npm run dev
+```
+
+The Supabase values aren't in the repository; ask Kevin for them. Git ignores
+`.env.local`, so they never get committed.
+
+Vite prints the local URL (usually http://localhost:5173). The first screen asks
+for the team password, which is `TEAM_KEY` in `src/lib/identity.js`.
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the dev server with hot reload |
+| `npm run build` | Build for production into `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run lint` | Lint with oxlint |
+
+> [!WARNING]
+> **Local development uses the live database.** There is no staging environment,
+> so anything you do in `npm run dev`, such as setting availability, changes real
+> team data. Captain actions still require the passcode.
+
+## Project layout
+
+```
+src/
+├── App.jsx              Routes, the entry gates, page transitions
+├── main.jsx             Entry point
+├── styles.css           All styles; design tokens at the top
+├── pages/
+│   ├── Home.jsx         Next match and your availability
+│   ├── Schedule.jsx     Every match, with quick availability picks
+│   ├── MatchDetail.jsx  One match: who's in and the posted lineup
+│   ├── Team.jsx         Stats tab: records, leaderboard, your profile, captain unlock
+│   ├── Captain.jsx      Captain overview: upcoming matches, playing time, pairings
+│   └── CaptainMatch.jsx Lineup builder, auto-suggest, posting, results, match editing
+├── components/
+│   ├── ui.jsx           Shared pieces: chips, sheets, toasts, tooltips, availability picker
+│   ├── MatchRow.jsx     A row on the Schedule
+│   └── …                TabBar, Splash, and the team / name / captain gates
+└── lib/
+    ├── store.jsx        Data loading, live updates, and every Supabase write
+    ├── stats.js         All statistics, derived from lineups
+    ├── rules.js         League rules (the 6.0 combined cap)
+    ├── suggest.js       The auto-suggest algorithm
+    ├── dates.js         Pacific-time formatting and match phases
+    ├── identity.js      Team password, player identity, captain passcode
+    ├── nav.js           Tab order, used for page-slide direction
+    └── supabase.js      Supabase client
+
+supabase-setup.sql       Schema, row-level security, captain functions
+netlify.toml             Build settings and SPA redirect
+.env.example             The Supabase settings needed to run locally (no values)
+```
+
+## How it works
+
+### Access
+
+There are no user accounts, just three layers:
+
+| Layer | What it does | Where it lives |
+|---|---|---|
+| **Team password** | Keeps out anyone who stumbles on the URL. Client-side only, by design. A link ending in `?key=<password>` unlocks the app and then removes the key from the address bar. | `TEAM_KEY` in `src/lib/identity.js` |
+| **Player identity** | Each player picks their name once, and the device remembers it. | `localStorage` |
+| **Captain passcode** | Required for every lineup, result, and match edit. Checked inside Postgres against a SHA-256 hash that the browser can never read. | `usta_config` table and the `usta_*` database functions |
+
+Anyone with the link can set availability. That's deliberate, so nobody needs a login.
+
+### Data
+
+Everything lives in Supabase, in tables prefixed `usta_`.
+
+| Table | Contents |
+|---|---|
+| `usta_players` | Roster: USTA name, preferred name, gender, NTRP, USTA number, phone, Venmo, captain flag |
+| `usta_matches` | Each match: time, home/away, opponent, site, team note, whether the lineup is posted |
+| `usta_availability` | One row per player per match: `available`, `maybe`, or `out` |
+| `usta_lineups` | One row per match per court: the pair, `won`, and `score` |
+| `usta_config` | The captain passcode hash (no browser access) |
+
+- **Every statistic comes from `usta_lineups`**: play counts, records, partnerships,
+  and court history. Entering scores after each match is the only upkeep. A lineup
+  counts toward play totals once the match starts or the lineup is posted; a draft
+  for a future match doesn't.
+- **Changes sync live.** Availability, lineups, and match edits update on every open
+  phone through Supabase Realtime.
+- **Names:** `usta_players.name` is the official USTA roster name. The app shows
+  `preferred_name` when one is set, through `displayName()` in `src/components/ui.jsx`.
+
+### Match phases
+
+A single function, `matchPhase()` in `src/lib/dates.js`, decides whether a match is
+**upcoming**, **live**, or **past**, so every screen agrees. It re-checks when a
+phone wakes up or the tab regains focus. All times are Pacific.
+
+### Lineups
+
+Three courts, each with one man and one woman. Two rules shape every lineup:
+
+- **Each court may total at most 6.0 NTRP.** `pairOverCap()` in `src/lib/rules.js`
+  is the single source of truth, used by the court cards, slot picker, problems
+  list, and the confirmation before posting. Players without a rating are never
+  flagged.
+- **Availability counts are split by gender, never totaled.** Seven yeses can still
+  mean there aren't three women.
+
+**Auto-suggest** (`src/lib/suggest.js`) tries every combination of available
+players and picks the best one by these priorities, in order:
+
+1. **Legal.** It never seats a pair over 6.0. If that means swapping someone in or
+   leaving the bottom court open, it says so.
+2. **Who most needs to play.** Yeses before maybes, then the fewest other chances
+   this season, then the fewest matches played.
+3. **Where each pair plays.** Pairs with a winning record stay together, a win moves
+   a player up a court and a loss moves them down, and NTRP breaks ties.
+
+The suggestion fills the draft so the captain can review it before saving.
+
+## Captain operations
+
+**Unlock captain tools.** Go to the Stats tab → **Captain tools** and enter the
+passcode. Players marked as captains on the roster also see a Captain tab. Each
+device remembers the passcode once entered.
+
+**Reschedule a match.** Captain → the match → **Match details → Edit** lets you
+change the date, site, and team note. No deploy needed.
+
+**Add a player.** There's no screen for this yet. Run this in the Supabase SQL
+editor; the app picks it up on the next load, no deploy needed.
+
+```sql
+insert into public.usta_players (name, gender, ntrp, usta_number, phone, sort_order)
+values ('First Last', 'F', 3.0, '2019000000', '206-555-0100',
+        (select coalesce(max(sort_order), 0) + 1 from public.usta_players));
+```
+
+**Change the captain passcode.** Run this in the Supabase SQL editor, and pick
+something random, since the check allows unlimited guesses.
+
+```sql
+select public.usta_set_captain_pass('current-passcode', 'new-passcode');
+```
+
+**Change the team password.** Edit `TEAM_KEY` in `src/lib/identity.js` (keep it
+lowercase), then deploy.
+
+## Deploying
+
+The site is hosted on Netlify. Deploys are manual, from a machine that has
+`.env.local` filled in and is logged in to the Netlify CLI:
+
+```bash
+netlify link          # once per clone
+npm run build
+netlify deploy --prod --no-build --dir=dist
+```
+
+The repository is deliberately not connected to Netlify's automatic deploys, so
+pushing doesn't use up build credits. Only code changes need a deploy; roster,
+schedule, and availability changes are data and show up immediately.
+
+## Contributing
+
+1. Create a branch: `git switch -c short-description`
+2. Before pushing, run `npm run lint` and `npm run build`
+3. Open a pull request against `main`
+4. Kevin reviews, merges, and deploys
+
+Remember that local development writes to the live database.
+
+## Gotchas
+
+- **Overlays must render into `document.body`.** Page transitions animate `transform`
+  on the `.page` wrapper, which breaks `position: fixed` for anything inside it.
+  `Sheet` and `Toast` in `src/components/ui.jsx` use a portal for this reason; do the
+  same for any new overlay.
+- **iPhones clear site data after about a week without a visit** (apps added to the
+  home screen are exempt). A player who hasn't opened the app in a while may see the
+  password and name screens again. Sending the `?key=` link makes that painless.
+- **The splash animation plays once per browser session** and waits for data (up to
+  4.5 seconds). Open a new tab or run `sessionStorage.clear()` to see it again. Its
+  animation steps share one timing, so retime them together.
+- **Motion is turned off** for anyone with *Reduce motion* enabled, splash included.
+- **`supabase-setup.sql` is behind the live database.** It doesn't yet include the
+  `preferred_name` and `venmo` columns or the `usta_update_profile` function.

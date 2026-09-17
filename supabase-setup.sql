@@ -1,0 +1,206 @@
+-- Volley Llama team app — Supabase schema.
+-- Applied 2026-08-30 via migrations usta_tennis_team_schema, usta_captain_rpcs,
+-- usta_lock_check_pass_and_rotate. Kept here as the readable source of truth.
+
+-- ============================ 1. tables ============================
+
+create table if not exists public.usta_players (
+  id           uuid primary key default gen_random_uuid(),
+  name         text not null unique,
+  gender       text not null check (gender in ('M','F')),
+  ntrp         numeric(2,1),
+  usta_number  text,
+  phone        text,
+  is_captain   boolean not null default false,
+  active       boolean not null default true,
+  sort_order   int not null default 0,
+  created_at   timestamptz not null default now()
+);
+
+create table if not exists public.usta_matches (
+  id                uuid primary key default gen_random_uuid(),
+  match_no          int not null unique,
+  usta_match_id     text,
+  starts_at         timestamptz not null,
+  is_home           boolean not null,
+  opponent          text not null,
+  opponent_captain  text,
+  site              text not null,
+  site_address      text,
+  notes             text,
+  lineup_published  boolean not null default false
+);
+
+create table if not exists public.usta_availability (
+  match_id   uuid not null references public.usta_matches(id) on delete cascade,
+  player_id  uuid not null references public.usta_players(id) on delete cascade,
+  status     text not null check (status in ('available','maybe','out')),
+  note       text,
+  updated_at timestamptz not null default now(),
+  primary key (match_id, player_id)
+);
+
+create table if not exists public.usta_lineups (
+  id         uuid primary key default gen_random_uuid(),
+  match_id   uuid not null references public.usta_matches(id) on delete cascade,
+  court      smallint not null check (court between 1 and 3),
+  player1_id uuid references public.usta_players(id) on delete set null,  -- the man
+  player2_id uuid references public.usta_players(id) on delete set null,  -- the woman
+  won        boolean,   -- null = not played / not entered yet
+  score      text,
+  unique (match_id, court)
+);
+
+create table if not exists public.usta_config (key text primary key, value text not null);
+
+create index if not exists usta_lineups_match_idx on public.usta_lineups(match_id);
+create index if not exists usta_avail_match_idx on public.usta_availability(match_id);
+
+-- ============================ 2. access ============================
+-- Players self-serve availability with no login (13 people, unlisted link).
+-- Everything else is read-only from the browser and written only through the
+-- passcode-checked functions in section 3.
+
+alter table public.usta_players      enable row level security;
+alter table public.usta_matches      enable row level security;
+alter table public.usta_availability enable row level security;
+alter table public.usta_lineups      enable row level security;
+alter table public.usta_config       enable row level security;
+
+revoke all on public.usta_players, public.usta_matches, public.usta_availability,
+              public.usta_lineups, public.usta_config from anon, authenticated;
+
+grant select on public.usta_players, public.usta_matches, public.usta_lineups to anon, authenticated;
+grant select, insert, update on public.usta_availability to anon, authenticated;
+
+create policy usta_players_read on public.usta_players for select to anon, authenticated using (true);
+create policy usta_matches_read on public.usta_matches for select to anon, authenticated using (true);
+create policy usta_lineups_read on public.usta_lineups for select to anon, authenticated using (true);
+create policy usta_avail_read   on public.usta_availability for select to anon, authenticated using (true);
+create policy usta_avail_write  on public.usta_availability for insert to anon, authenticated with check (true);
+create policy usta_avail_update on public.usta_availability for update to anon, authenticated using (true) with check (true);
+
+-- usta_config has RLS on and NO policies, plus no grants: unreachable from the
+-- browser. Only the SECURITY DEFINER functions below can read the passcode hash.
+
+-- ============================ 3. captain RPCs ============================
+-- The passcode never leaves the database. The browser sends a candidate and
+-- gets true/false, or the write is rejected with 'unauthorized'.
+
+create or replace function public.usta_check_pass(p_pass text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.usta_config
+    where key = 'captain_pass_hash'
+      and value = encode(sha256(convert_to(coalesce(p_pass,''), 'utf8')), 'hex')
+  );
+$$;
+
+create or replace function public.usta_verify_captain(p_pass text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select public.usta_check_pass(p_pass);
+$$;
+
+-- p_courts: [{"court":1,"player1_id":"uuid","player2_id":"uuid"}, ...]
+-- Upserts, so a result already entered on a court survives a lineup edit.
+create or replace function public.usta_save_lineup(p_pass text, p_match_id uuid, p_courts jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.usta_check_pass(p_pass) then raise exception 'unauthorized'; end if;
+
+  insert into public.usta_lineups (match_id, court, player1_id, player2_id)
+  select p_match_id, (c->>'court')::smallint,
+         nullif(c->>'player1_id','')::uuid, nullif(c->>'player2_id','')::uuid
+  from jsonb_array_elements(coalesce(p_courts, '[]'::jsonb)) c
+  on conflict (match_id, court) do update
+    set player1_id = excluded.player1_id, player2_id = excluded.player2_id;
+
+  delete from public.usta_lineups l
+  where l.match_id = p_match_id
+    and l.court not in (select (c->>'court')::smallint
+                        from jsonb_array_elements(coalesce(p_courts, '[]'::jsonb)) c);
+end $$;
+
+-- p_results: [{"court":1,"won":true,"score":"6-3, 6-4"}, ...]
+create or replace function public.usta_save_results(p_pass text, p_match_id uuid, p_results jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.usta_check_pass(p_pass) then raise exception 'unauthorized'; end if;
+  update public.usta_lineups l
+     set won   = case when r->>'won' is null or r->>'won' = '' then null else (r->>'won')::boolean end,
+         score = nullif(r->>'score','')
+    from jsonb_array_elements(coalesce(p_results, '[]'::jsonb)) r
+   where l.match_id = p_match_id and l.court = (r->>'court')::smallint;
+end $$;
+
+create or replace function public.usta_publish_lineup(p_pass text, p_match_id uuid, p_published boolean)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.usta_check_pass(p_pass) then raise exception 'unauthorized'; end if;
+  update public.usta_matches set lineup_published = coalesce(p_published, false) where id = p_match_id;
+end $$;
+
+create or replace function public.usta_update_match(
+  p_pass text, p_match_id uuid, p_starts_at timestamptz, p_site text, p_notes text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.usta_check_pass(p_pass) then raise exception 'unauthorized'; end if;
+  update public.usta_matches
+     set starts_at = coalesce(p_starts_at, starts_at),
+         site      = coalesce(nullif(p_site,''), site),
+         notes     = p_notes
+   where id = p_match_id;
+end $$;
+
+create or replace function public.usta_upsert_player(
+  p_pass text, p_id uuid, p_name text, p_gender text, p_ntrp numeric, p_phone text, p_active boolean)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
+begin
+  if not public.usta_check_pass(p_pass) then raise exception 'unauthorized'; end if;
+  if p_id is null then
+    insert into public.usta_players (name, gender, ntrp, phone, active, sort_order)
+    values (p_name, p_gender, p_ntrp, p_phone, coalesce(p_active, true),
+            coalesce((select max(sort_order) + 1 from public.usta_players), 0))
+    returning id into v_id;
+  else
+    update public.usta_players
+       set name = coalesce(nullif(p_name,''), name), gender = coalesce(nullif(p_gender,''), gender),
+           ntrp = coalesce(p_ntrp, ntrp), phone = p_phone, active = coalesce(p_active, active)
+     where id = p_id returning id into v_id;
+  end if;
+  return v_id;
+end $$;
+
+create or replace function public.usta_set_captain_pass(p_old_pass text, p_new_pass text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.usta_check_pass(p_old_pass) then raise exception 'unauthorized'; end if;
+  if coalesce(length(p_new_pass), 0) < 6 then raise exception 'passcode must be at least 6 characters'; end if;
+  update public.usta_config
+     set value = encode(sha256(convert_to(p_new_pass, 'utf8')), 'hex')
+   where key = 'captain_pass_hash';
+end $$;
+
+-- usta_check_pass must be revoked from PUBLIC too, not just anon: functions are
+-- executable by PUBLIC by default, so revoking from anon alone leaves it open.
+revoke all on function public.usta_check_pass(text) from public, anon, authenticated;
+
+grant execute on function public.usta_verify_captain(text) to anon, authenticated;
+grant execute on function public.usta_save_lineup(text, uuid, jsonb) to anon, authenticated;
+grant execute on function public.usta_save_results(text, uuid, jsonb) to anon, authenticated;
+grant execute on function public.usta_publish_lineup(text, uuid, boolean) to anon, authenticated;
+grant execute on function public.usta_update_match(text, uuid, timestamptz, text, text) to anon, authenticated;
+grant execute on function public.usta_upsert_player(text, uuid, text, text, numeric, text, boolean) to anon, authenticated;
+grant execute on function public.usta_set_captain_pass(text, text) to anon, authenticated;
+
+-- ============================ 4. realtime ============================
+alter publication supabase_realtime add table public.usta_availability;
+alter publication supabase_realtime add table public.usta_lineups;
+alter publication supabase_realtime add table public.usta_matches;
+
+-- ============================ 5. reset helpers ============================
+-- Wipe a season back to a clean slate (roster and schedule stay):
+--   delete from public.usta_lineups;
+--   delete from public.usta_availability;
+--   update public.usta_matches set lineup_published = false;

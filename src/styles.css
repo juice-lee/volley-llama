@@ -1,0 +1,763 @@
+:root {
+  /* paper & ink */
+  --bg: #fbf6e9;
+  --card: #ffffff;
+  --card2: #f7f2e2;
+  --line: #e9e1cb;
+  --line-strong: #d8ceb0;
+  --text: #22303a;
+  --dim: #6d7b85;
+  --dimmer: #9ba6ad;
+
+  /* tennis ball */
+  --accent: #dcf24f;
+  --accent-deep: #b9d42b;
+  --accent-soft: #f4fbd1;
+  --accent-text: #5c7708;
+  --on-accent: #1e2a0b;
+
+  /* court surfaces: grass = home, clay = away */
+  --grass: #45914f;
+  --grass-soft: #e2f2e2;
+  --clay: #cf6c3c;
+  --clay-soft: #fbe8dc;
+  --court: #2f6fd0;
+  --court-soft: #e4edfc;
+
+  /* availability */
+  --ok: #2f9e56;
+  --ok-soft: #e2f4e8;
+  --maybe: #d1901f;
+  --maybe-soft: #fbeed6;
+  --out: #d6534d;
+  --out-soft: #fbe4e2;
+
+  --ease-out: cubic-bezier(0.22, 0.9, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
+  --ease-swing: cubic-bezier(0.5, 0, 0.35, 1);
+
+  --sh: 0 2px 0 var(--line), 0 8px 22px rgba(34, 48, 58, 0.07);
+  --sh-lift: 0 10px 30px rgba(34, 48, 58, 0.16);
+  --tab-h: 76px;
+  --pad: 16px;
+  --r: 20px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  color: var(--text);
+  background-color: var(--bg);
+  /* a soft wash of tennis-ball light across the top of the page */
+  background-image: radial-gradient(1100px 400px at 50% -170px, rgba(220, 242, 79, 0.55), transparent 72%);
+  background-attachment: fixed;
+  font-family: "Nunito", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+.app {
+  max-width: 560px;
+  margin: 0 auto;
+  min-height: 100%;
+  padding: 0 var(--pad);
+  padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 28px);
+}
+
+/* ---------- type ---------- */
+.h1 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 30px; font-weight: 800; letter-spacing: -0.015em;
+  line-height: 1.1; margin: 0;
+}
+.h1-long { font-size: 24px; }
+/* the hero leads with when, not who — that's what you open the app for */
+.h1.when { font-size: 27px; line-height: 1.15; }
+.when-time {
+  font-family: "Fraunces", Georgia, serif; font-size: 33px; font-weight: 800;
+  line-height: 1.05; color: var(--accent-text); margin-top: 1px;
+}
+.who { font-size: 16.5px; font-weight: 700; color: var(--dim); margin-top: 6px; }
+
+/* A faint ball in the bottom corner keeps the hero from being a plain white box.
+   Kept small and low so it never competes with the countdown sticker. */
+.card.hero { position: relative; }
+.card.hero::after {
+  content: ''; position: absolute; width: 132px; height: 132px; border-radius: 50%;
+  right: -46px; bottom: -52px; background: var(--accent-soft); opacity: 0.7;
+  pointer-events: none;
+}
+.card.hero > * { position: relative; z-index: 1; }
+.h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 21px; font-weight: 700; letter-spacing: -0.01em; margin: 0;
+}
+.eyebrow {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.13em;
+  text-transform: uppercase; color: var(--dim);
+}
+.sub { color: var(--dim); font-size: 14.5px; }
+.tiny { font-size: 12.5px; color: var(--dim); font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- layout ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: calc(env(safe-area-inset-top) + 20px) 0 14px;
+}
+.section { margin: 28px 0 12px; display: flex; align-items: baseline; justify-content: space-between; }
+.row { display: flex; align-items: center; gap: 10px; }
+.spread { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stack { display: grid; gap: 10px; }
+
+.card {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r);
+  padding: 16px;
+  overflow: hidden;
+  box-shadow: var(--sh);
+}
+.card.flat { background: var(--card2); box-shadow: none; border-color: var(--line); }
+.card.tap { display: block; width: 100%; text-align: left; transition: transform 0.12s ease; }
+.card.tap:active { transform: translateY(2px); }
+
+/* ---------- badges & chips ---------- */
+.badge {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.09em; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+}
+.badge.home { background: var(--grass-soft); color: var(--grass); }
+.badge.away { background: var(--clay-soft); color: var(--clay); }
+
+.chip {
+  font-size: 12.5px; font-weight: 800; padding: 5px 11px; border-radius: 999px;
+  border: 1.5px solid var(--line); color: var(--dim); white-space: nowrap;
+  background: var(--card);
+}
+.chip.available { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+.chip.maybe { background: var(--maybe-soft); border-color: transparent; color: var(--maybe); }
+.chip.out { background: var(--out-soft); border-color: transparent; color: var(--out); }
+.chip.win { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+.chip.loss { background: var(--out-soft); border-color: transparent; color: var(--out); }
+.chip.accent { background: var(--accent-soft); border-color: transparent; color: var(--accent-text); }
+
+/* the countdown reads as a sticker slapped on the card */
+.chip.sticker {
+  background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep);
+  transform: rotate(-2.5deg); box-shadow: 0 2px 0 var(--accent-deep);
+}
+
+.dot { width: 9px; height: 9px; border-radius: 999px; background: var(--line-strong); flex: none; }
+.dot.available { background: var(--ok); }
+.dot.maybe { background: var(--maybe); }
+.dot.out { background: var(--out); }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 50px; padding: 0 18px; border-radius: 15px;
+  background: var(--card); color: var(--text);
+  border: 1.5px solid var(--line-strong); border-bottom-width: 3.5px;
+  font-weight: 800; font-size: 15px;
+  transition: transform 0.1s ease, border-bottom-width 0.1s ease;
+}
+.btn:active { transform: translateY(2px); border-bottom-width: 1.5px; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep); }
+.btn.ghost { background: transparent; border-color: var(--line); border-bottom-width: 1.5px; color: var(--dim); }
+.btn.ghost:active { transform: translateY(1px); }
+.btn.wide { width: 100%; }
+.btn.sm { min-height: 40px; font-size: 13.5px; padding: 0 14px; border-radius: 12px; border-bottom-width: 2.5px; }
+.btn:disabled { opacity: 0.5; }
+.btn:disabled:active { transform: none; border-bottom-width: 3.5px; }
+
+/* three-way availability picker */
+.picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.pick {
+  min-height: 82px; border-radius: 18px;
+  border: 2px solid var(--line); border-bottom-width: 4px;
+  background: var(--card); display: grid; place-items: center; gap: 5px;
+  padding: 10px 4px; font-size: 12.5px; font-weight: 800; line-height: 1.15; text-align: center;
+  color: var(--dim);
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.pick .glyph { font-size: 25px; line-height: 1; }
+.pick:active { transform: translateY(2px); }
+.pick.on.available { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.pick.on.maybe { background: var(--maybe-soft); border-color: var(--maybe); color: var(--maybe); }
+.pick.on.out { background: var(--out-soft); border-color: var(--out); color: var(--out); }
+
+/* ---------- avatar ---------- */
+.av {
+  width: 38px; height: 38px; border-radius: 999px; flex: none;
+  display: grid; place-items: center; font-size: 12.5px; font-weight: 800;
+  background: var(--card2); color: var(--dim); border: 1.5px solid var(--line);
+}
+.av.lg { width: 48px; height: 48px; font-size: 15px; }
+.center > .av { margin-inline: auto; }
+.av.f { background: #f6e6ff; color: #8846bd; border-color: #ead2fa; }
+.av.m { background: var(--court-soft); color: var(--court); border-color: #cfdff8; }
+
+/* ---------- tab bar: a floating pill, not a slab ---------- */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; justify-content: center; pointer-events: none;
+  padding: 0 14px calc(env(safe-area-inset-bottom) + 12px);
+}
+.tabs-inner {
+  pointer-events: auto;
+  display: flex; width: 100%; max-width: 430px; gap: 4px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: saturate(150%) blur(12px);
+  border: 1.5px solid var(--line);
+  border-radius: 24px; padding: 6px;
+  box-shadow: var(--sh-lift);
+}
+.tab {
+  flex: 1; height: 52px; border-radius: 18px;
+  display: grid; place-items: center; gap: 2px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.04em; color: var(--dimmer);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.tab .glyph { font-size: 19px; line-height: 1; }
+.tab.on { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- match rows ---------- */
+.mcard { padding: 0; }
+.mcard.done { opacity: 0.62; }
+.mrow-link { display: block; padding: 12px; }
+.mrow-link:active { transform: translateY(1px); }
+
+.quickpick {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  padding: 0 10px 10px;
+}
+.qp {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 40px; border-radius: 12px; font-size: 12.5px; font-weight: 800;
+  border: 1.5px solid var(--line); background: var(--card2); color: var(--dim);
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.1s ease;
+}
+.qp .glyph { font-size: 15px; line-height: 1; }
+.qp:active { transform: scale(0.96); }
+.qp.on.available { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.qp.on.maybe { background: var(--maybe-soft); border-color: var(--maybe); color: var(--maybe); }
+.qp.on.out { background: var(--out-soft); border-color: var(--out); color: var(--out); }
+.qp.on .glyph { animation: glyphHop 520ms var(--ease-spring); }
+
+.mrow { display: flex; gap: 12px; align-items: center; min-width: 0; }
+
+/* the row echoes the hero's hierarchy: time loud, site next, opponent quiet */
+.mrow-when { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.mrow-time {
+  font-family: "Fraunces", Georgia, serif; font-size: 20px; font-weight: 800;
+  line-height: 1.15; color: var(--accent-text);
+}
+/* home/away rides the top-right corner, status chip tucks under it */
+.mrow-meta { flex: none; display: grid; gap: 5px; justify-items: end; }
+.mrow-site { font-size: 14.5px; font-weight: 700; margin-top: 5px; }
+.mrow-opp { font-size: 12.5px; font-weight: 600; color: var(--dim); margin-top: 2px; }
+.mdate {
+  width: 56px; flex: none; text-align: center; border-radius: 14px;
+  background: var(--accent-soft); padding: 6px 0 5px; border: 1.5px solid #e6f2bd;
+  overflow: hidden;
+}
+.mdate .m {
+  font-size: 10px; font-weight: 800; color: var(--accent-text);
+  text-transform: uppercase; letter-spacing: 0.08em; line-height: 1.3;
+}
+.mdate .n { font-size: 22px; font-weight: 800; line-height: 1.05; font-family: "Fraunces", Georgia, serif; }
+.mdate .d {
+  font-size: 9.5px; font-weight: 800; color: var(--dim);
+  text-transform: uppercase; letter-spacing: 0.07em; line-height: 1.4;
+}
+/* a match the yeses can't fill gets a flag on its date */
+.mdate-wrap { position: relative; flex: none; display: block; }
+.alert-dot {
+  position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--out); color: #fff; font-size: 12.5px; font-weight: 900; line-height: 1;
+  border: 2px solid var(--card); box-shadow: 0 1px 3px rgba(34, 48, 58, 0.25);
+  animation: popIn 380ms var(--ease-spring) both;
+}
+
+/* ---------- lineup courts ---------- */
+.court {
+  border: 1.5px solid var(--line); border-radius: 18px; padding: 13px;
+  background: var(--card2);
+}
+.court + .court { margin-top: 10px; }
+.court.mine { background: var(--accent-soft); border-color: var(--accent-deep); }
+/* a pair over the 6.0 combined cap isn't a legal USTA court */
+.court.invalid { background: var(--out-soft); border-color: var(--out); }
+.ntrp-sum.over { color: var(--out); }
+.court-flag { margin-top: 9px; font-size: 12.5px; font-weight: 800; color: var(--out); }
+.slots { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 9px; }
+.slot {
+  min-height: 64px; border-radius: 14px; padding: 9px 11px;
+  border: 2px dashed var(--line-strong); background: rgba(255, 255, 255, 0.55);
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  text-align: left; color: var(--dim); font-size: 13px; font-weight: 700;
+  transition: transform 0.1s ease;
+}
+.slot.filled { border-style: solid; border-color: var(--line); background: var(--card); color: var(--text); box-shadow: 0 1px 0 var(--line); }
+.slot .nm { font-size: 14.5px; font-weight: 800; line-height: 1.2; }
+.slot:active { transform: translateY(2px); }
+
+/* ---------- sheet ---------- */
+.scrim {
+  position: fixed; inset: 0; background: rgba(34, 48, 58, 0.42); z-index: 50;
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: fade 0.15s ease;
+}
+.sheet {
+  width: 100%; max-width: 560px; max-height: 86vh; overflow-y: auto;
+  background: var(--bg); border-radius: 26px 26px 0 0;
+  border: 1.5px solid var(--line); border-bottom: 0;
+  padding: 10px var(--pad) calc(env(safe-area-inset-bottom) + 22px);
+  animation: up 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.grabber { width: 42px; height: 5px; border-radius: 999px; background: var(--line-strong); margin: 6px auto 14px; }
+@keyframes up { from { transform: translateY(26px); opacity: 0.4; } }
+@keyframes fade { from { opacity: 0; } }
+
+/* the way out mirrors the way in */
+.scrim.closing { animation: fadeOut 0.18s ease both; }
+.scrim.closing .sheet { animation: down 0.18s ease both; }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes down { to { transform: translateY(26px); opacity: 0; } }
+
+.pickrow {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 12px 10px; border-radius: 14px; text-align: left;
+}
+.pickrow:active { background: var(--card2); }
+.pickrow + .pickrow { border-top: 1.5px solid var(--line); }
+.pickrow.dim { opacity: 0.55; }
+
+/* ---------- name gate combobox ---------- */
+.combo { position: relative; }
+.combo-field {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card); border: 2px solid var(--line-strong);
+  border-radius: 16px; padding: 0 14px; min-height: 56px;
+  box-shadow: var(--sh);
+}
+.combo-field:focus-within { border-color: var(--accent-deep); box-shadow: 0 0 0 4px var(--accent-soft); }
+/* the field itself is the control; the inner input must not draw its own box */
+.combo-field input[type="text"] {
+  flex: 1; min-width: 0; border: 0; background: none; outline: none; box-shadow: none;
+  font-size: 16.5px; font-weight: 700; padding: 0; min-height: 0; border-radius: 0;
+}
+.combo-field input[type="text"]:focus { border: 0; box-shadow: none; }
+.combo-field input::placeholder { color: var(--dimmer); font-weight: 600; }
+.caret {
+  width: 30px; height: 30px; border-radius: 999px; flex: none;
+  display: grid; place-items: center; color: var(--dim); font-size: 12px;
+  background: var(--card2); transition: transform 0.18s ease;
+}
+.caret.open { transform: rotate(180deg); }
+.combo-menu {
+  margin-top: 8px; background: var(--card);
+  border: 1.5px solid var(--line); border-radius: 18px;
+  box-shadow: var(--sh-lift); overflow: hidden;
+  max-height: 46vh; overflow-y: auto;
+  animation: pop 0.16s ease;
+}
+@keyframes pop { from { transform: translateY(-6px); opacity: 0; } }
+.combo-opt {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 11px 13px; text-align: left;
+}
+.combo-opt + .combo-opt { border-top: 1.5px solid var(--line); }
+.combo-opt.hi { background: var(--accent-soft); }
+.combo-empty { padding: 18px 14px; text-align: center; }
+
+.echo {
+  margin-top: 10px; text-align: center;
+  font-size: 13px; font-weight: 700; color: var(--dim);
+  animation: riseIn 320ms var(--ease-spring) both;
+}
+
+/* ---------- profile form ---------- */
+.fieldset { display: grid; gap: 18px; }
+
+/* ---------- segmented control & prefixed input ---------- */
+.seg {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  background: var(--card2); border: 1.5px solid var(--line);
+  border-radius: 15px; padding: 5px;
+}
+.seg-btn {
+  min-height: 42px; border-radius: 11px; font-weight: 800; font-size: 14.5px;
+  color: var(--dim); transition: background 0.16s ease, color 0.16s ease, transform 0.1s ease;
+}
+.seg-btn:active { transform: scale(0.97); }
+.seg-btn.on { background: var(--accent); color: var(--on-accent); box-shadow: 0 1px 0 var(--accent-deep); }
+
+.prefixed { position: relative; }
+.prefixed .prefix {
+  position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+  color: var(--dimmer); font-weight: 800; pointer-events: none;
+}
+.prefixed input[type="text"] { padding-left: 32px; }
+
+/* ---------- availability split ---------- */
+.avail-tile { text-align: center; padding: 12px 8px 10px; }
+.avail-pill {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--card2); border: 1.5px solid var(--line);
+  border-radius: 14px; padding: 8px 10px;
+}
+.avail-n { font-size: 30px; font-weight: 800; line-height: 1.1; font-family: "Fraunces", Georgia, serif; }
+.avail-pill .avail-n { font-size: 22px; }
+.avail-n.ok { color: var(--ok); }
+.avail-n.low { color: var(--out); }
+
+/* ---------- who's behind a count ---------- */
+/* the panel is positioned against .nametip-row, not the chip, so a long roster
+   spans the row instead of running off the side of a phone */
+.nametip-row { position: relative; }
+.nametip-wrap { display: inline-flex; min-width: 0; cursor: pointer; }
+.nametip-wrap.tipfill { flex: 1; }
+.nametip-wrap:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 3px; border-radius: 14px; }
+.nametip {
+  position: absolute; top: calc(100% + 7px); left: 0; right: 0; z-index: 40;
+  padding: 9px 12px; border-radius: 14px;
+  background: var(--text); color: var(--bg);
+  font-size: 13px; font-weight: 700; line-height: 1.4; text-align: left;
+  box-shadow: var(--sh-lift);
+  opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-4px);
+  transition: opacity 0.14s var(--ease-out), transform 0.14s var(--ease-out), visibility 0.14s;
+}
+.nametip-wrap.open .nametip { opacity: 1; visibility: visible; transform: none; }
+@media (hover: hover) {
+  .nametip-wrap:hover .nametip { opacity: 1; visibility: visible; transform: none; }
+}
+
+/* ---------- slot-picker match log ---------- */
+.logline { margin-top: 2px; }
+.res { font-size: 10.5px; letter-spacing: 0.06em; color: var(--dimmer); }
+.res.win { color: var(--ok); }
+.res.loss { color: var(--out); }
+
+/* ---------- stats leaderboard ---------- */
+.pickrow.lb { gap: 8px; padding-left: 8px; padding-right: 8px; }
+.lb-head { padding: 4px 10px 6px; gap: 8px; }
+.lb-p { width: 30px; text-align: right; flex: none; }
+.lb-wl { width: 52px; text-align: right; flex: none; }
+
+/* ---------- misc ---------- */
+.bar { height: 9px; border-radius: 999px; background: var(--card2); overflow: hidden; display: flex; border: 1px solid var(--line); }
+.bar i { display: block; height: 100%; }
+.notice {
+  border-radius: 15px; padding: 12px 14px; font-size: 14px; font-weight: 700;
+  border: 1.5px solid transparent;
+}
+.notice.warn { background: var(--maybe-soft); color: #8a5c05; border-color: #f2dfb4; }
+.notice.good { background: var(--ok-soft); color: #1d6d3a; border-color: #c6e6d1; }
+.notice.bad { background: var(--out-soft); color: #a8332e; border-color: #f2cbc8; }
+.notice.info { background: var(--card2); color: var(--dim); border-color: var(--line); }
+
+input[type="text"], input[type="password"], input[type="tel"], input[type="datetime-local"],
+textarea, select {
+  width: 100%; min-height: 50px; padding: 13px 15px; border-radius: 15px;
+  background: var(--card); border: 2px solid var(--line-strong); font-size: 16px; font-weight: 600;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none; border-color: var(--accent-deep); box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+/* a court line, not just a rule */
+.divider { height: 0; border-top: 2px dashed var(--line); margin: 15px 0; }
+.center { text-align: center; }
+.grow { flex: 1; min-width: 0; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt { margin-top: 12px; }
+.mt2 { margin-top: 22px; }
+
+/* ---------- the bouncing ball ---------- */
+.loader { display: grid; place-items: center; gap: 4px; }
+.ball {
+  font-size: 40px; line-height: 1;
+  animation: bounce 0.62s cubic-bezier(0.3, 0, 0.6, 1) infinite alternate;
+}
+.ball-shadow {
+  width: 34px; height: 7px; border-radius: 999px; background: rgba(34, 48, 58, 0.15);
+  animation: squash 0.62s cubic-bezier(0.3, 0, 0.6, 1) infinite alternate;
+}
+@keyframes bounce { from { transform: translateY(-26px) rotate(-18deg); } to { transform: translateY(0) rotate(12deg); } }
+@keyframes squash { from { transform: scale(0.6); opacity: 0.35; } to { transform: scale(1); opacity: 1; } }
+
+/* =====================================================================
+   MOTION
+   Everything below is decoration; the reduced-motion block at the end of
+   this file switches all of it off in one place.
+   ===================================================================== */
+
+@keyframes riseIn { from { opacity: 0; transform: translateY(10px); } }
+@keyframes popIn { from { opacity: 0; transform: scale(0.86); } }
+@keyframes growX { from { transform: scaleX(0); } }
+@keyframes toastIn { from { opacity: 0; transform: translateY(16px) scale(0.96); } }
+@keyframes cheer {
+  0% { transform: scale(0.9); }
+  55% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+@keyframes nudge {
+  0%, 100% { transform: rotate(-2.5deg); }
+  45% { transform: rotate(-6deg) scale(1.04); }
+}
+
+/* Route changes animate with a transform, so anything position:fixed must live
+   outside this wrapper — Sheet and Toast portal to <body> for exactly that reason. */
+@keyframes fadeIn { from { opacity: 0; } }
+.page { animation: fadeIn 240ms var(--ease-out) both; }
+/* tabs sit left-to-right, so a page arrives from the side it lives on */
+.page.fwd { animation: slideFwd 320ms var(--ease-out) both; }
+.page.back { animation: slideBack 320ms var(--ease-out) both; }
+@keyframes slideFwd { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: none; } }
+@keyframes slideBack { from { opacity: 0; transform: translateX(-34px); } to { opacity: 1; transform: none; } }
+
+/* lists deal themselves in */
+.stagger > * { animation: riseIn 400ms var(--ease-out) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 45ms; }
+.stagger > *:nth-child(3) { animation-delay: 90ms; }
+.stagger > *:nth-child(4) { animation-delay: 135ms; }
+.stagger > *:nth-child(5) { animation-delay: 180ms; }
+.stagger > *:nth-child(6) { animation-delay: 215ms; }
+.stagger > *:nth-child(7) { animation-delay: 245ms; }
+.stagger > *:nth-child(n + 8) { animation-delay: 270ms; }
+
+.bar i { animation: growX 640ms var(--ease-out) both; transform-origin: left center; }
+.stat-pop { animation: popIn 420ms var(--ease-spring) both; }
+
+/* the countdown sticker lands with a wobble */
+.chip.sticker { animation: nudge 620ms var(--ease-spring) both; }
+
+/* "you're playing" deserves a small celebration */
+.notice.cheer { animation: cheer 480ms var(--ease-spring) both; }
+
+.toast {
+  position: fixed; left: 16px; right: 16px; bottom: calc(var(--tab-h) + 20px); z-index: 60;
+  max-width: 528px; margin: 0 auto; text-align: center;
+  animation: toastIn 340ms var(--ease-spring) both;
+}
+
+/* picking an availability should feel like it landed */
+@keyframes pickLand {
+  0% { transform: scale(0.94); }
+  60% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.pick.on { animation: pickLand 380ms var(--ease-spring); }
+@keyframes glyphHop {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-8px) scale(1.18); }
+  70% { transform: translateY(0) scale(0.94); }
+  100% { transform: translateY(0) scale(1); }
+}
+.pick.on .glyph { animation: glyphHop 520ms var(--ease-spring); }
+
+/* the active tab's icon pops when you land on it */
+@keyframes tabPop { 0% { transform: scale(0.7); } 60% { transform: scale(1.14); } 100% { transform: scale(1); } }
+.tab.on .glyph { animation: tabPop 380ms var(--ease-spring); }
+
+/* =====================================================================
+   SPLASH — ball flies in, gets struck, curtains part on the app
+   ===================================================================== */
+
+.splash { position: fixed; inset: 0; z-index: 200; }
+
+.curtain {
+  position: fixed; left: 0; right: 0; height: 50.2%;
+  background-color: var(--bg);
+  background-image: radial-gradient(1100px 400px at 50% -170px, rgba(220, 242, 79, 0.55), transparent 72%);
+  background-repeat: no-repeat;
+  background-size: 100vw 100vh;
+  transition: transform 700ms var(--ease-swing);
+}
+.curtain.top { top: 0; background-position: 0 0; }
+.curtain.bottom { bottom: 0; background-position: 0 -50vh; }
+.splash.leaving .curtain.top { transform: translateY(-100%); }
+.splash.leaving .curtain.bottom { transform: translateY(100%); }
+
+.scene {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  transition: opacity 260ms ease, transform 420ms var(--ease-out);
+}
+.splash.leaving .scene { opacity: 0; transform: scale(1.25); }
+
+/* The ball arrives at dead centre at CONTACT_MS; every other beat is timed off
+   that so the racquet, the squash and the impact ring all land together. */
+.flyer { position: absolute; animation: flyIn 380ms var(--ease-out) both; }
+.hop { animation: flyArc 380ms cubic-bezier(0.35, 0, 0.55, 1) both; }
+.settle { animation: hitPop 560ms var(--ease-spring) 380ms both; }
+.squash { animation: flySquash 430ms var(--ease-spring) 350ms both; }
+.spin { animation: flySpin 1500ms cubic-bezier(0.1, 0.7, 0.2, 1) both; }
+.ballsvg { width: 92px; height: 92px; display: block; filter: drop-shadow(0 10px 14px rgba(34, 48, 58, 0.18)); }
+
+@keyframes flyIn { from { transform: translateX(max(-46vw, -430px)); } to { transform: translateX(0); } }
+@keyframes flyArc { from { transform: translateY(17vh); } to { transform: translateY(0); } }
+@keyframes hitPop {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-28px); }
+  100% { transform: translateY(0); }
+}
+@keyframes flySpin { from { transform: rotate(-560deg); } to { transform: rotate(14deg); } }
+@keyframes flySquash {
+  0% { transform: scale(1); }
+  18% { transform: scale(1.34, 0.7); }   /* contact */
+  46% { transform: scale(0.9, 1.13); }
+  100% { transform: scale(1); }
+}
+
+/* the racquet swings in from the right and follows through off-frame.
+   Its head sits ~34px above the element's centre, hence the +4vh at contact. */
+.racquet {
+  position: absolute; width: 116px; height: 224px;
+  transform-origin: 50% 96%;
+  animation: swing 820ms var(--ease-swing) both;
+}
+.racquet svg { width: 100%; height: 100%; display: block; }
+@keyframes swing {
+  0% { opacity: 0; transform: translate(min(74vw, 700px), 30vh) rotate(74deg); }
+  20% { opacity: 1; }
+  46% { transform: translate(min(-2vw, -18px), 4vh) rotate(12deg); }  /* contact, ~380ms: ball in the strings */
+  66% { opacity: 1; transform: translate(max(-20vw, -190px), -6vh) rotate(-30deg); }
+  100% { opacity: 0; transform: translate(max(-56vw, -530px), -24vh) rotate(-66deg); }
+}
+
+/* the pop of contact */
+.impact {
+  position: absolute; width: 96px; height: 96px; border-radius: 50%;
+  border: 4px solid var(--accent-deep);
+  animation: impact 460ms var(--ease-out) 370ms both;
+}
+@keyframes impact {
+  from { opacity: 0.85; transform: scale(0.42); }
+  to { opacity: 0; transform: scale(3.1); }
+}
+
+.splash-word {
+  position: absolute; top: calc(50% + 82px); text-align: center; width: 100%;
+  animation: riseIn 520ms var(--ease-spring) 700ms both;
+}
+.splash-word .wm {
+  font-family: "Fraunces", Georgia, serif; font-size: 30px; font-weight: 800;
+  letter-spacing: -0.015em; color: var(--text);
+}
+.splash-word .wm-sub {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--dim); margin-top: 2px;
+}
+
+/* the app itself swells into place as the curtains clear */
+.stage-open { animation: stageOpen 700ms var(--ease-out) both; }
+@keyframes stageOpen { from { transform: scale(0.955); opacity: 0.5; } to { transform: none; opacity: 1; } }
+
+/* =====================================================================
+   POINTER & DESKTOP REFINEMENTS
+   The app stays a single calm column; a mouse just gets to feel it.
+   ===================================================================== */
+
+::selection { background: var(--accent); color: var(--on-accent); }
+
+:focus-visible { outline: 3px solid var(--accent-deep); outline-offset: 2px; border-radius: 6px; }
+.btn:focus-visible, .pick:focus-visible, .qp:focus-visible, .tab:focus-visible,
+.slot:focus-visible, .pickrow:focus-visible { outline-offset: 0; }
+
+@media (hover: hover) and (pointer: fine) {
+  .btn, .card.tap, .pick, .qp, .slot, .pickrow, .tab, .chip, .combo-opt, .seg-btn {
+    transition: transform 0.14s var(--ease-out), box-shadow 0.14s var(--ease-out),
+                background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+  }
+  .card.tap:hover { transform: translateY(-2px); box-shadow: 0 2px 0 var(--line), 0 12px 28px rgba(34, 48, 58, 0.12); }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.04); }
+  .pick:hover, .slot:hover { transform: translateY(-1px); border-color: var(--line-strong); }
+  .pick.on:hover { border-color: currentColor; }
+  .qp:hover { border-color: var(--line-strong); color: var(--text); }
+  .qp.on:hover { color: inherit; }
+  .pickrow:hover, .combo-opt:hover { background: var(--card2); }
+  .tab:hover { color: var(--dim); }
+  .tab.on:hover { color: var(--on-accent); }
+  .chip:where(button):hover { border-color: var(--line-strong); }
+}
+
+/* a phone idiom on a big screen looks lost — the sheet becomes a centered card */
+@media (min-width: 720px) {
+  .scrim { align-items: center; padding: 24px; }
+  .sheet {
+    max-width: 480px; max-height: 82vh;
+    border-radius: 24px; border-bottom: 1.5px solid var(--line);
+    padding-bottom: 22px;
+    animation: modalIn 0.22s var(--ease-spring);
+  }
+  .scrim.closing .sheet { animation: modalOut 0.18s ease both; }
+  .grabber { display: none; }
+  .toast { max-width: 420px !important; }
+}
+@keyframes modalIn { from { transform: scale(0.94) translateY(8px); opacity: 0; } }
+@keyframes modalOut { to { transform: scale(0.95) translateY(6px); opacity: 0; } }
+
+/* Wide screens: the column breathes and the thumb-idiom bottom bar becomes a
+   floating side rail. Every rule below is desktop-only — mobile never sees it. */
+@media (min-width: 1000px) {
+  .app { max-width: 640px; }
+}
+
+@media (min-width: 1080px) {
+  .tabs {
+    left: max(24px, calc(50vw - 320px - 140px)); right: auto; top: 50%; bottom: auto;
+    transform: translateY(-50%);
+    width: auto; padding: 0; justify-content: flex-start;
+  }
+  .tabs-inner {
+    flex-direction: column; width: 92px; gap: 6px;
+    border-radius: 26px; padding: 8px;
+  }
+  .tab { height: 64px; flex: none; border-radius: 20px; }
+  .tab .glyph { font-size: 22px; }
+
+  /* no bottom bar to clear any more */
+  .app { padding-bottom: 48px; }
+  .toast { bottom: 28px !important; }
+}
+
+/* the empty cream field around the column becomes a faint tennis court */
+@media (min-width: 900px) {
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(circle 260px at 12% 82%, transparent 258px, rgba(185, 212, 43, 0.14) 259px, transparent 261px),
+      radial-gradient(circle 200px at 88% 16%, transparent 198px, rgba(185, 212, 43, 0.12) 199px, transparent 201px),
+      linear-gradient(to right, transparent calc(12% - 1px), rgba(34, 48, 58, 0.035) 12%, transparent calc(12% + 1px)),
+      linear-gradient(to right, transparent calc(88% - 1px), rgba(34, 48, 58, 0.035) 88%, transparent calc(88% + 1px));
+  }
+  #root { position: relative; z-index: 1; }
+
+  /* the splash ball reads tiny in a big window */
+  .ballsvg { width: 118px; height: 118px; }
+  .racquet { width: 148px; height: 286px; }
+  .impact { width: 122px; height: 122px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
