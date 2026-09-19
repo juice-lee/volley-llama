@@ -58,7 +58,7 @@ for the team password, which is `TEAM_KEY` in `src/lib/identity.js`.
 > [!WARNING]
 > **Local development uses the live database.** There is no staging environment,
 > so anything you do in `npm run dev`, such as setting availability, changes real
-> team data. Captain actions still require the passcode.
+> team data. Captain actions still require the password.
 
 ## Project layout
 
@@ -84,7 +84,7 @@ src/
     ├── rules.js         League rules (the 6.0 combined cap)
     ├── suggest.js       The auto-suggest algorithm
     ├── dates.js         Pacific-time formatting and match phases
-    ├── identity.js      Team password, player identity, captain passcode
+    ├── identity.js      Team password, player identity, captain password
     ├── nav.js           Tab order, used for page-slide direction
     └── supabase.js      Supabase client
 
@@ -103,7 +103,7 @@ There are no user accounts, just three layers:
 |---|---|---|
 | **Team password** | Keeps out anyone who stumbles on the URL. Client-side only, by design. A link ending in `?key=<password>` unlocks the app and then removes the key from the address bar. | `TEAM_KEY` in `src/lib/identity.js` |
 | **Player identity** | Each player picks their name once, and the device remembers it. | `localStorage` |
-| **Captain passcode** | Required for every lineup, result, and match edit. Checked inside Postgres against a SHA-256 hash that the browser can never read. | `usta_config` table and the `usta_*` database functions |
+| **Captain password** | Required for every lineup, result, and match edit. Checked inside Postgres against a SHA-256 hash that the browser can never read. | `usta_config` table and the `usta_*` database functions |
 
 Anyone with the link can set availability. That's deliberate, so nobody needs a login.
 
@@ -117,7 +117,7 @@ Everything lives in Supabase, in tables prefixed `usta_`.
 | `usta_matches` | Each match: time, home/away, opponent, site, team note, whether the lineup is posted |
 | `usta_availability` | One row per player per match: `available`, `maybe`, or `out` |
 | `usta_lineups` | One row per match per court: the pair, `won`, and `score` |
-| `usta_config` | The captain passcode hash (no browser access) |
+| `usta_config` | The captain password hash (no browser access) |
 
 - **Every statistic comes from `usta_lineups`**: play counts, records, partnerships,
   and court history. Entering scores after each match is the only upkeep. A lineup
@@ -159,9 +159,13 @@ The suggestion fills the draft so the captain can review it before saving.
 
 ## Captain operations
 
-**Unlock captain tools.** Go to the Stats tab → **Captain tools** and enter the
-passcode. Players marked as captains on the roster also see a Captain tab. Each
-device remembers the passcode once entered.
+**Captain tools.** Players marked as captains on the roster see the Captain tab
+and are unlocked automatically: the captain password comes from
+`VITE_CAPTAIN_PASS` in `.env.local` and is still verified server-side, so if
+the password ever changes without updating that file, the app simply asks for
+it. **Lock captain tools** on the Stats tab turns that off for a device until
+you unlock again. Anyone else can unlock from Stats → **Captain tools** by
+entering the password.
 
 **Reschedule a match.** Captain → the match → **Match details → Edit** lets you
 change the date, site, and team note. No deploy needed.
@@ -175,11 +179,11 @@ values ('First Last', 'F', 3.0, '2019000000', '206-555-0100',
         (select coalesce(max(sort_order), 0) + 1 from public.usta_players));
 ```
 
-**Change the captain passcode.** Run this in the Supabase SQL editor, and pick
-something random, since the check allows unlimited guesses.
+**Change the captain password.** Run this in the Supabase SQL editor, then put
+the new value in `.env.local` and redeploy so captains stay auto-unlocked.
 
 ```sql
-select public.usta_set_captain_pass('current-passcode', 'new-passcode');
+select public.usta_set_captain_pass('current-password', 'new-password');
 ```
 
 **Change the team password.** Edit `TEAM_KEY` in `src/lib/identity.js` (keep it
@@ -222,7 +226,7 @@ Remember that local development writes to the live database.
   4.5 seconds). Open a new tab or run `sessionStorage.clear()` to see it again. Its
   animation steps share one timing, so retime them together.
 - **Motion is turned off** for anyone with *Reduce motion* enabled, splash included.
-- **Phone and Venmo edits need the captain passcode.** Players can change their
+- **Phone and Venmo edits need the captain password.** Players can change their
   preferred name and gender freely; contact details are read-only unless the
   device has captain tools unlocked, and the database refuses the change without
-  the passcode either way (`usta_update_profile`).
+  the password either way (`usta_update_profile`).

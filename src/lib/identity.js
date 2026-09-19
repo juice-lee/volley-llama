@@ -18,6 +18,16 @@ export const setCaptainPass = (pass) => {
   try { pass ? localStorage.setItem(PASS, pass) : localStorage.removeItem(PASS) } catch { /* private mode */ }
 }
 
+// Roster captains are unlocked automatically (see the store). Tapping "Lock"
+// is a deliberate act, so it has to survive the next auto-unlock and a reload.
+const LOCKED = 'vl_captain_locked'
+export const getCaptainLocked = () => {
+  try { return localStorage.getItem(LOCKED) === '1' } catch { return false }
+}
+export const setCaptainLocked = (on) => {
+  try { on ? localStorage.setItem(LOCKED, '1') : localStorage.removeItem(LOCKED) } catch { /* private mode */ }
+}
+
 // ---- team gate ----
 // Keeps drive-by visitors out if the URL leaks. Deliberately client-side and
 // deliberately not secret-grade: the roster and schedule aren't state secrets,

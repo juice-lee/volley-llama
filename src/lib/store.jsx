@@ -1,6 +1,6 @@
 import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './supabase'
-import { getMyId, setMyId, getCaptainPass, setCaptainPass } from './identity'
+import { getMyId, setMyId, getCaptainPass, setCaptainPass, getCaptainLocked, setCaptainLocked } from './identity'
 
 const Ctx = createContext(null)
 export const useTeam = () => useContext(Ctx)
@@ -126,13 +126,26 @@ export function TeamProvider({ children }) {
   // ---- captain ----
   const unlockCaptain = useCallback(async (pass) => {
     const { data, error: e } = await supabase.rpc('usta_verify_captain', { p_pass: pass })
-    if (e) throw new Error('Could not check the passcode')
+    if (e) throw new Error('Could not check the password')
     if (!data) return false
-    setCaptainPass(pass); setPassState(pass)
+    setCaptainPass(pass); setPassState(pass); setCaptainLocked(false)
     return true
   }, [])
 
-  const lockCaptain = useCallback(() => { setCaptainPass(null); setPassState(null) }, [])
+  const lockCaptain = useCallback(() => { setCaptainPass(null); setPassState(null); setCaptainLocked(true) }, [])
+
+  // Roster captains shouldn't have to type the passcode: it comes from the build
+  // settings and is still verified server-side, so a stale value just brings the
+  // prompt back. A deliberate "Lock" wins until the captain unlocks again.
+  const autoPass = import.meta.env.VITE_CAPTAIN_PASS || ''
+  const [captainPending, setCaptainPending] = useState(false)
+  useEffect(() => {
+    if (!me?.is_captain || captainPass || !autoPass || getCaptainLocked()) return
+    let cancelled = false
+    setCaptainPending(true)
+    unlockCaptain(autoPass).catch(() => false).finally(() => { if (!cancelled) setCaptainPending(false) })
+    return () => { cancelled = true }
+  }, [me, captainPass, autoPass, unlockCaptain])
 
   const rpc = useCallback(async (fn, args) => {
     const { error: e } = await supabase.rpc(fn, { p_pass: captainPass, ...args })
@@ -143,7 +156,7 @@ export function TeamProvider({ children }) {
   const value = {
     players, matches, availability, lineups, loading, error, reload: load,
     me, myId, chooseMe, setAvail, availOf, lineupFor, saveProfile,
-    isCaptain: !!captainPass, unlockCaptain, lockCaptain,
+    isCaptain: !!captainPass, captainPending, unlockCaptain, lockCaptain,
     saveLineup: (matchId, courts) => rpc('usta_save_lineup', { p_match_id: matchId, p_courts: courts }),
     saveResults: (matchId, results) => rpc('usta_save_results', { p_match_id: matchId, p_results: results }),
     publishLineup: (matchId, published) => rpc('usta_publish_lineup', { p_match_id: matchId, p_published: published }),

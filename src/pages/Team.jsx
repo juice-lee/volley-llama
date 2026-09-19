@@ -203,7 +203,7 @@ function UnlockSheet({ onClose, unlock, onDone }) {
     try {
       const ok = await unlock(pass)
       if (ok) onDone()
-      else setErr('That passcode did not work.')
+      else setErr('That password did not work.')
     } catch (e2) {
       setErr(e2.message)
     } finally {
@@ -212,10 +212,10 @@ function UnlockSheet({ onClose, unlock, onDone }) {
   }
 
   return (
-    <Sheet title="Captain passcode" onClose={onClose}>
+    <Sheet title="Captain password" onClose={onClose}>
       <p className="sub">Setting lineups and entering results is captain-only.</p>
       <form onSubmit={submit} className="stack mt">
-        <input type="password" value={pass} autoFocus placeholder="Passcode"
+        <input type="password" value={pass} autoFocus placeholder="Captain password"
                onChange={(e) => setPass(e.target.value)} />
         {err && <div className="notice bad">{err}</div>}
         <button className="btn primary wide" disabled={busy || !pass}>{busy ? 'Checking…' : 'Unlock'}</button>
