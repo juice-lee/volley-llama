@@ -164,13 +164,17 @@ export default function CaptainMatch() {
   }
 
   const lineupText = () => {
-    const head = `Volley Llama ${match.is_home ? 'vs' : '@'} ${match.opponent} — ${dayName(d)} ${monthDay(d)}, ${timeOf(d)} @ ${match.site}`
+    // always "vs" — an away game used to read "@ Opponent … @ Site", two @ signs
+    const head = `Volley Llama vs ${match.opponent} — ${dayName(d)} ${monthDay(d)}, ${timeOf(d)} @ ${match.site}`
     const lines = draft.map((c) => {
       const a = displayName(byId(c.player1_id)) || 'TBD'
       const b = displayName(byId(c.player2_id)) || 'TBD'
       return `D${c.court}: ${a} + ${b}`
     })
-    return [head, '', ...lines].join('\n')
+    const balls = match.is_home
+      ? 'This is a home game, so please bring a can of balls!'
+      : 'This is an away game, so no need to bring balls.'
+    return [head, '', ...lines, '', balls].join('\n')
   }
 
   const nudgeText = () =>

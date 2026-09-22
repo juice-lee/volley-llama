@@ -101,7 +101,7 @@ export default function Team() {
       )}
 
       {/* ---------- leaderboard ---------- */}
-      <div className="section"><h2 className="h2">Players</h2><span className="tiny">tap for detail</span></div>
+      <div className="section"><h2 className="h2">Players</h2><span className="tiny">tap a player for more info</span></div>
       <div className="row" style={{ gap: 7, marginBottom: 10, flexWrap: 'wrap' }}>
         {SORTS.map(([k, label]) => (
           <button key={k} className={`chip ${sort === k ? 'accent' : ''}`} onClick={() => setSort(k)}>
