@@ -94,8 +94,8 @@ export default function MatchDetail() {
                 <div key={c.court} className={`court ${mine ? 'mine' : ''}`}>
                   <div className="spread">
                     <span className="eyebrow">Doubles {c.court}</span>
-                    {c.won === true && <span className="chip win">Won {c.score || ''}</span>}
-                    {c.won === false && <span className="chip loss">Lost {c.score || ''}</span>}
+                    {past && c.won === true && <span className="chip win">Won {c.score || ''}</span>}
+                    {past && c.won === false && <span className="chip loss">Lost {c.score || ''}</span>}
                   </div>
                   <div style={{ fontWeight: 700, marginTop: 4 }}>
                     {nameOf(c.player1_id)} <span style={{ color: 'var(--dimmer)' }}>+</span> {nameOf(c.player2_id)}

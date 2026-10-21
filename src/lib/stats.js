@@ -1,17 +1,18 @@
 // Everything the captain looks at is derived from usta_lineups, so there is no
 // second source of truth to keep in sync.
+import { isPastMatch } from './dates'
 
 const pairKey = (a, b) => [a, b].sort().join('|')
 
-// A drafted lineup for a future match shouldn't inflate anyone's play count, but
-// a published one should: that's a commitment the captain already made. Note this
-// flips at the start time, not at the end of the match — once you're on court for
-// it, it counts toward your total.
-export const countsAsPlayed = (match, now) =>
-  !!match && (match.lineup_published || new Date(match.starts_at) < now)
+// A match counts (as a game played, and for its win or loss) only once it's
+// over: the same rule that moves it to "Played" on the Schedule. A posted lineup
+// for an upcoming match is still just a plan.
+export const countsAsPlayed = (match, now) => !!match && isPastMatch(match, now)
 
 export function buildStats({ matches, lineups, now = new Date() }) {
   const matchById = new Map(matches.map((m) => [m.id, m]))
+  // every number below comes from matches that have actually been played
+  const played = lineups.filter((l) => countsAsPlayed(matchById.get(l.match_id), now))
   const byPlayer = new Map()
   const pairs = new Map()
   const courtResults = new Map() // matchId -> {won, lost, pending}
@@ -23,16 +24,14 @@ export function buildStats({ matches, lineups, now = new Date() }) {
     return byPlayer.get(id)
   }
 
-  for (const l of lineups) {
+  for (const l of played) {
     const m = matchById.get(l.match_id)
-    if (!m) continue
 
     if (l.won !== null && l.won !== undefined) {
       const r = courtResults.get(m.id) || { won: 0, lost: 0 }
       l.won ? r.won++ : r.lost++
       courtResults.set(m.id, r)
     }
-    if (!countsAsPlayed(m, now)) continue
 
     const both = [l.player1_id, l.player2_id].filter(Boolean)
     for (const id of both) {
@@ -106,7 +105,7 @@ export function buildStats({ matches, lineups, now = new Date() }) {
   // Team record on each of the three courts, for the stats page.
   const courtRecord = () => {
     const out = { 1: { w: 0, l: 0 }, 2: { w: 0, l: 0 }, 3: { w: 0, l: 0 } }
-    for (const l of lineups) {
+    for (const l of played) {
       if (l.won === true) out[l.court].w++
       else if (l.won === false) out[l.court].l++
     }
@@ -115,7 +114,7 @@ export function buildStats({ matches, lineups, now = new Date() }) {
 
   const courtTotals = () => {
     let w = 0, l = 0
-    for (const row of lineups) {
+    for (const row of played) {
       if (row.won === true) w++
       else if (row.won === false) l++
     }

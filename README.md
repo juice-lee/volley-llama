@@ -129,9 +129,10 @@ Everything lives in Supabase, in tables prefixed `usta_`.
 | `usta_config` | The captain password hash (no browser access) |
 
 - **Every statistic comes from `usta_lineups`**: play counts, records, partnerships,
-  and court history. Entering scores after each match is the only upkeep. A lineup
-  counts toward play totals once the match starts or the lineup is posted; a draft
-  for a future match doesn't.
+  and court history. Entering scores after each match is the only upkeep. A match
+  counts toward play totals and records only once it's over (the moment the Schedule
+  moves it to *Played*). A posted lineup for an upcoming match doesn't count yet,
+  and neither does a result entered before the match is played.
 - **Changes sync live.** Availability, lineups, match edits, practices, sign-ups, and
   lights reports update on every open phone through Supabase Realtime.
 - **Names:** `usta_players.name` is the official USTA roster name. The app shows
