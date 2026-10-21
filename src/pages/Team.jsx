@@ -120,7 +120,7 @@ export default function Team() {
             <Avatar player={p} />
             <div className="grow">
               <div className="truncate" style={{ fontWeight: 800 }}>{displayName(p)}{p.id === me.id ? ' (you)' : ''}</div>
-              <div className="tiny">{p.gender === 'F' ? 'Women' : 'Men'} · {Number(p.ntrp).toFixed(1)}</div>
+              <div className="tiny">{p.gender === 'F' ? 'Woman' : 'Man'} · {Number(p.ntrp).toFixed(1)}</div>
             </div>
             <span className="num lb-p" style={{ fontWeight: 800 }}>{s.count}</span>
             <span className="num lb-wl" style={{ fontWeight: 800 }}>{recordShort(s.wins, s.losses)}</span>
@@ -235,7 +235,7 @@ function PlayerSheet({ player, stats, players, matches, onClose }) {
       <div className="row" style={{ gap: 14, marginBottom: 4 }}>
         <Avatar player={player} lg />
         <div className="grow">
-          <div className="sub">{player.gender === 'F' ? 'Women' : 'Men'} · NTRP {Number(player.ntrp).toFixed(1)}</div>
+          <div className="sub">{player.gender === 'F' ? 'Woman' : 'Man'} · NTRP {Number(player.ntrp).toFixed(1)}</div>
           <div className="tiny num">
             {s.lastMatchNo ? `Last played match ${s.lastMatchNo}` : 'Not on court yet this season'}
           </div>
