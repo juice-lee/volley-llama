@@ -267,6 +267,24 @@ a { color: inherit; text-decoration: none; }
 .mrow-meta { flex: none; display: grid; gap: 5px; justify-items: end; }
 .mrow-site { font-size: 14.5px; font-weight: 700; margin-top: 5px; }
 .mrow-opp { font-size: 12.5px; font-weight: 600; color: var(--dim); margin-top: 2px; }
+
+/* a posted lineup's answer to "am I playing?", where the answer buttons sit on
+   other cards, so every upcoming card keeps the same shape */
+.lineup-strip {
+  display: flex; align-items: center; gap: 11px;
+  margin-top: 12px; padding: 10px 12px; border-radius: 12px;
+  border: 1.5px solid transparent;
+}
+.lineup-icon {
+  flex: none; width: 26px; height: 26px; border-radius: 999px;
+  display: grid; place-items: center; font-size: 14px; font-weight: 900;
+}
+.lineup-head { font-size: 14.5px; font-weight: 800; line-height: 1.25; }
+.lineup-sub { font-size: 13px; font-weight: 700; margin-top: 1px; }
+.lineup-strip.in { background: var(--ok-soft); border-color: var(--ok); color: #1d6d3a; }
+.lineup-strip.in .lineup-icon { background: var(--ok); color: #fff; }
+.lineup-strip.out { background: var(--card2); border-color: var(--line); color: var(--dim); }
+.lineup-strip.out .lineup-icon { background: var(--line); color: var(--dim); }
 .mdate {
   width: 56px; flex: none; text-align: center; border-radius: 14px;
   background: var(--accent-soft); padding: 6px 0 5px; border: 1.5px solid #e6f2bd;
